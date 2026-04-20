@@ -1,0 +1,27 @@
+{
+  "name": "morning_routine",
+  "trigger": {
+    "type": "schedule",
+    "cron": "0 9 * * *"
+  },
+  "steps": [
+    {
+      "id": "step_1",
+      "action": "speak",
+      "params": {"text": "Good morning, starting daily routine"},
+      "depends_on": []
+    },
+    {
+      "id": "step_2",
+      "action": "run_shell_command",
+      "params": {"command": "echo Daily routine started >> slovio_log.txt"},
+      "depends_on": ["step_1"]
+    },
+    {
+      "id": "step_3",
+      "action": "speak",
+      "params": {"text": "Daily routine complete"},
+      "depends_on": ["step_2"]
+    }
+  ]
+}

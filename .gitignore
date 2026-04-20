@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+*.log
+slovio_log.txt
+
+# Databases
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+.Xauthority
+
+# Env
+.env
+.env.local
+
+# Project specific
+app1.log
+clipboard_content.txt
+hello.txt
+slovio_test.txt

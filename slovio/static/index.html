@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slovio AI | Orbital Command</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary: #06b6d4;
+            --secondary: #8b5cf6;
+            --bg-deep: #000000;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-deep);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Noise Texture */
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.04;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+        }
+
+        /* Aurora Depth */
+        .aurora-container {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden;
+            filter: blur(100px);
+            opacity: 0.4;
+        }
+
+        .blob {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            border-radius: 50%;
+            mix-blend-mode: screen;
+        }
+
+        .blob-1 { background: radial-gradient(circle, #3b82f6 0%, transparent 70%); top: -10%; left: -10%; }
+        .blob-2 { background: radial-gradient(circle, #a855f7 0%, transparent 70%); bottom: -20%; right: -10%; }
+        .blob-3 { background: radial-gradient(circle, #10b981 0%, transparent 70%); top: 40%; left: 30%; width: 600px; height: 600px; }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(30px) saturate(150%);
+            -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; }
+
+        #messages::-webkit-scrollbar { width: 4px; }
+        #messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
+        .message-bubble {
+            max-width: 85%;
+            padding: 1rem 1.25rem;
+            border-radius: 20px;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .message-bubble:hover { transform: scale(1.02); }
+
+        .msg-user {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-slovio {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* AI Core Illustration */
+        .ai-core-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 400px;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .ai-core-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 30px rgba(6, 182, 212, 0.3));
+        }
+
+        .input-glow {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+        }
+
+        /* Typing Animation */
+        .dot { width: 5px; height: 5px; background: white; border-radius: 50%; opacity: 0.6; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .magnetic-wrap { display: inline-block; position: relative; }
+    </style>
+</head>
+<body class="flex items-center justify-center">
+    <div class="noise"></div>
+    <div class="aurora-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- AI Core Floating Element -->
+    <div class="ai-core-wrapper">
+        <img src="/static/slovio_ai_core.png" alt="Slovio Core" class="ai-core-img" id="slovio-core">
+    </div>
+
+    <main id="app-container" class="glass-panel w-full max-w-5xl h-[90vh] flex flex-col m-8 overflow-hidden relative opacity-0">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-8 py-6 border-b border-white/5 bg-white/[0.02]">
+            <div class="flex items-center gap-5">
+                <div class="relative">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-600 p-[1px]">
+                        <div class="w-full h-full bg-black rounded-[inherit] flex items-center justify-center">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" class="stroke-cyan-400">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="status-glow" class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black shadow-[0_0_15px_#22c55e]"></div>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight text-white/90">SLOVIO <span class="text-xs tracking-[0.3em] font-light text-cyan-400 block mt-[-4px]">NEURAL INTERFACE</span></h1>
+                </div>
+            </div>
+            <div class="text-right hidden sm:block">
+                <p class="text-[10px] uppercase tracking-widest text-white/30 font-semibold mb-1">System Status</p>
+                <p id="status-label" class="text-sm font-medium text-green-400">Stable Connection</p>
+            </div>
+        </header>
+
+        <!-- Message Grid -->
+        <div id="messages" class="flex-1 overflow-y-auto px-8 py-10 flex flex-col gap-6 mask-fade-edges">
+            <div class="msg-slovio message-bubble">
+                <p class="text-white/80">Interface synchronized. Neural core active. How may I assist your workflow today?</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <footer class="p-8 pb-10 bg-gradient-to-t from-white/[0.02] to-transparent">
+            <form id="chat-form" class="relative group">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-3xl opacity-20 group-focus-within:opacity-40 transition-opacity blur"></div>
+                <div class="relative flex items-center bg-black/40 border border-white/10 rounded-2xl h-16 px-4 backdrop-blur-xl">
+                    <input 
+                        type="text" 
+                        id="command-input" 
+                        autocomplete="off"
+                        class="flex-1 bg-transparent border-none text-white placeholder-white/20 focus:outline-none px-4 font-normal text-lg"
+                        placeholder="Transmit command strings..." 
+                    />
+                    <button 
+                        type="submit" 
+                        class="w-12 h-12 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all group-hover:bg-cyan-500/10 active:scale-95"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-cyan-400 group-focus-within:text-white transition-colors">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+            <div class="mt-4 flex justify-center gap-6 text-[10px] uppercase tracking-[0.2em] text-white/20 font-bold">
+                <span>Direct Control</span>
+                <span class="text-white/5">|</span>
+                <span>Spatial Recall</span>
+                <span class="text-white/5">|</span>
+                <span>Automated Flow</span>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        // Init Entrances
+        gsap.to('#app-container', { opacity: 1, y: 0, duration: 1.5, ease: "expo.out" });
+        
+        // Background Blobs Animation
+        gsap.to('.blob-1', { x: '20vw', y: '10vh', duration: 20, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        gsap.to('.blob-2', { x: '-15vw', y: '-20vh', duration: 25, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        gsap.to('.blob-3', { x: '10vw', y: '-10vh', duration: 18, repeat: -1, yoyo: true, ease: "sine.inOut" });
+
+        // AI Core Rotation & Breathing
+        gsap.to('#slovio-core', { 
+            rotate: 360, 
+            duration: 60, 
+            repeat: -1, 
+            ease: "none" 
+        });
+        gsap.to('#slovio-core', { 
+            scale: 1.1, 
+            duration: 8, 
+            repeat: -1, 
+            yoyo: true, 
+            ease: "sine.inOut" 
+        });
+
+        // WebSocket Logic
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        let ws;
+        
+        const messagesDiv = document.getElementById("messages");
+        const form = document.getElementById("chat-form");
+        const input = document.getElementById("command-input");
+        const statusGlow = document.getElementById("status-glow");
+        const statusLabel = document.getElementById("status-label");
+
+        function connect() {
+            ws = new WebSocket(wsUrl);
+            ws.onopen = () => {
+                statusGlow.className = "absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black shadow-[0_0_15px_#22c55e]";
+                statusLabel.innerText = "Stable Connection";
+                statusLabel.className = "text-sm font-medium text-green-400";
+            };
+            ws.onclose = () => {
+                statusGlow.className = "absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-black shadow-[0_0_15px_#ef4444]";
+                statusLabel.innerText = "Synchronizing...";
+                statusLabel.className = "text-sm font-medium text-red-500";
+                setTimeout(connect, 3000);
+            };
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                hideTyping();
+                if (data.type === 'chat') {
+                    addMessage(data.payload.text, 'slovio');
+                } else if (data.type === 'log') {
+                    console.log(`[System Log] ${data.payload.message}`);
+                    if (data.payload.level === 'error') {
+                        addMessage(`Error: ${data.payload.message}`, 'slovio');
+                    }
+                }
+            };
+        }
+
+        function addMessage(text, sender) {
+            const wrapper = document.createElement("div");
+            wrapper.className = `message-bubble ${sender === 'user' ? 'msg-user' : 'msg-slovio'} opacity-0 translate-y-4`;
+            
+            // Basic formatting for code/newlines
+            const formatted = text.replace(/\\n/g, '<br/>').replace(/```([\\s\\S]*?)```/g, '<pre class="bg-black/50 p-4 rounded-lg my-2 font-mono text-xs text-cyan-200"><code>$1</code></pre>');
+            wrapper.innerHTML = formatted;
+            
+            messagesDiv.appendChild(wrapper);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            gsap.to(wrapper, { opacity: 1, y: 0, duration: 0.6, ease: "power4.out" });
+        }
+
+        function showTyping() {
+            const typing = document.createElement("div");
+            typing.id = "typing-indicator";
+            typing.className = "msg-slovio message-bubble flex gap-1 items-center px-4 py-3";
+            typing.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            messagesDiv.appendChild(typing);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            gsap.to("#typing-indicator .dot", {
+                y: -4,
+                duration: 0.4,
+                stagger: 0.1,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut"
+            });
+        }
+
+        function hideTyping() {
+            const el = document.getElementById("typing-indicator");
+            if (el) el.remove();
+        }
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const val = input.value.trim();
+            if (!val || ws.readyState !== WebSocket.OPEN) return;
+            
+            addMessage(val, 'user');
+            ws.send(val);
+            input.value = "";
+            showTyping();
+        });
+
+        connect();
+
+        // Magnetic Effect on Send Button (Subtle)
+        const sendBtn = form.querySelector('button');
+        form.addEventListener('mousemove', (e) => {
+            const rect = sendBtn.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+            if (Math.abs(x) < 100 && Math.abs(y) < 100) {
+                gsap.to(sendBtn, { x: x * 0.2, y: y * 0.2, duration: 0.3 });
+            }
+        });
+        form.addEventListener('mouseleave', () => {
+            gsap.to(sendBtn, { x: 0, y: 0, duration: 0.5, ease: "elastic.out(1, 0.3)" });
+        });
+
+    </script>
+</body>
+</html>
